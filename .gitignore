@@ -1,0 +1,16 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+
+# Prisma generated files
+/prisma/migrations/
+/prisma/dev.db
+
+# Server temporary and test files
+tmp-*.js
+
+#creation files 
+create-bucket.js
+create-supabase-user.js

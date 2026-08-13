@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  RECEPTION
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  supabaseId  String?  @unique
+  email       String   @unique
+  name        String?
+  hashedPassword String?
+  role        UserRole @default(RECEPTION)
+  isActive    Boolean  @default(true)
+}
+
+enum RoomStatus {
+  AVAILABLE
+  BOOKED
+  RESERVED
+  MAINTENANCE
+}
+
+model Room {
+  id            Int         @id @default(autoincrement())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  name          String      @unique
+  slug          String?     @unique
+  type          String?
+  description   String?
+  capacity      Int         @default(1)
+  pricePerNight Int         @default(0)
+  status        RoomStatus  @default(AVAILABLE)
+  features      String?
+  images        RoomImage[]
+  bookings      Booking[]
+  reservations  Reservation[]
+}
+
+model RoomImage {
+  id        Int    @id @default(autoincrement())
+  room      Room   @relation(fields: [roomId], references: [id])
+  roomId    Int
+  url       String
+  altText   String?
+  isPrimary Boolean @default(false)
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  RESERVED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+model Booking {
+  id           Int            @id @default(autoincrement())
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  room         Room           @relation(fields: [roomId], references: [id])
+  roomId       Int
+  guestName    String
+  guestEmail   String
+  checkInDate  DateTime
+  checkOutDate DateTime
+  guests       Int            @default(1)
+  totalPrice   Float?
+  status       BookingStatus  @default(PENDING)
+}
+
+enum ReservationStatus {
+  RESERVED
+  CANCELLED
+  EXPIRED
+}
+
+model Reservation {
+  id         Int               @id @default(autoincrement())
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  room       Room              @relation(fields: [roomId], references: [id])
+  roomId     Int
+  guestName  String
+  guestEmail String?
+  holdFrom   DateTime
+  holdUntil  DateTime
+  guests     Int               @default(1)
+  notes      String?
+  status     ReservationStatus @default(RESERVED)
+}
+
+
+model Example {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  name      String
+}
