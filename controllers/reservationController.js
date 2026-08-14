@@ -4,9 +4,32 @@ const { createReservation, listReservations, getReservationById } = require('../
 
 async function createReservationController(req, res) {
   try {
-    const reservation = await createReservation(req.body);
+    const actor = req.user?.email || 'public';
+    console.info('[createReservation] request by', actor, 'payloadKeys=', Object.keys(req.body || {}));
+
+    // Basic validation
+    const { roomId, guestName, holdFrom, holdUntil, guests } = req.body || {};
+    if (!roomId || !guestName || !holdFrom || !holdUntil) {
+      console.warn('[createReservation] validation failed', { actor, body: req.body });
+      return res.status(400).json({ success: false, error: 'Missing required fields: roomId, guestName, holdFrom, holdUntil' });
+    }
+
+    // normalize types
+    const payload = {
+      roomId: Number(roomId),
+      guestName: String(guestName),
+      guestEmail: req.body.guestEmail || null,
+      holdFrom: holdFrom,
+      holdUntil: holdUntil,
+      guests: guests ? Number(guests) : 1,
+      notes: req.body.notes || null,
+    };
+
+    const reservation = await createReservation(payload);
+    console.info('[createReservation] created', { id: reservation.id, actor });
     return res.status(201).json({ success: true, data: reservation });
   } catch (error) {
+    console.error('[createReservation] failed', { message: error.message, stack: error.stack });
     return res.status(400).json({ success: false, error: error.message });
   }
 }

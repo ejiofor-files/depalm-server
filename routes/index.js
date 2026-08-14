@@ -11,7 +11,8 @@ const router = express.Router();
 router.get('/', getStatus);
 // Protect API endpoints that modify or return sensitive data
 router.use('/bookings', authMiddleware, bookingRoutes);
-router.use('/reservations', authMiddleware, reservationRoutes);
+// Mount reservations without global auth so the POST route can be public (public reservations)
+router.use('/reservations', reservationRoutes);
 router.use('/rooms', authMiddleware, roomRoutes);
 router.use('/users', authMiddleware, userRoutes);
 
