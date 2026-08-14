@@ -87,6 +87,12 @@ enum ReservationStatus {
   EXPIRED
 }
 
+enum ReservationSource {
+  ADMIN
+  RECEPTION
+  PUBLIC
+}
+
 model Reservation {
   id         Int               @id @default(autoincrement())
   createdAt  DateTime          @default(now())
@@ -99,6 +105,7 @@ model Reservation {
   holdUntil  DateTime
   guests     Int               @default(1)
   notes      String?
+  source     ReservationSource @default(PUBLIC)
   status     ReservationStatus @default(RESERVED)
 }
 

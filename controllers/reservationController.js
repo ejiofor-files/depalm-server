@@ -5,7 +5,17 @@ const { createReservation, listReservations, getReservationById } = require('../
 async function createReservationController(req, res) {
   try {
     const actor = req.user?.email || 'public';
-    console.info('[createReservation] request by', actor, 'payloadKeys=', Object.keys(req.body || {}));
+    const userRole = req.user?.role || null;
+    
+    // Determine source based on auth and role
+    let source = 'PUBLIC';
+    if (req.user && userRole === 'ADMIN') {
+      source = 'ADMIN';
+    } else if (req.user && userRole === 'RECEPTION') {
+      source = 'RECEPTION';
+    }
+    
+    console.info('[createReservation] request by', actor, 'source=', source, 'payloadKeys=', Object.keys(req.body || {}));
 
     // Basic validation
     const { roomId, guestName, holdFrom, holdUntil, guests } = req.body || {};
@@ -23,10 +33,11 @@ async function createReservationController(req, res) {
       holdUntil: holdUntil,
       guests: guests ? Number(guests) : 1,
       notes: req.body.notes || null,
+      source: source,
     };
 
     const reservation = await createReservation(payload);
-    console.info('[createReservation] created', { id: reservation.id, actor });
+    console.info('[createReservation] created', { id: reservation.id, actor, source });
     return res.status(201).json({ success: true, data: reservation });
   } catch (error) {
     console.error('[createReservation] failed', { message: error.message, stack: error.stack });
@@ -36,9 +47,23 @@ async function createReservationController(req, res) {
 
 async function listReservationsController(req, res) {
   try {
-    const reservations = await listReservations();
-    return res.json({ success: true, data: reservations });
+    const { page = 1, perPage = 50, source, status, roomId } = req.query;
+    
+    // Build filter
+    const where = {};
+    if (source) where.source = source;
+    if (status) where.status = status;
+    if (roomId) where.roomId = Number(roomId);
+    
+    const reservations = await listReservations({ 
+      page: Number(page), 
+      perPage: Number(perPage),
+      where 
+    });
+    
+    return res.json({ success: true, ...reservations });
   } catch (error) {
+    console.error('[listReservations] failed', error.message);
     return res.status(500).json({ success: false, error: error.message });
   }
 }
