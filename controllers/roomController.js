@@ -129,7 +129,41 @@ async function createRoomController(req, res) {
       return res.status(400).json({ success: false, error: 'Missing required field: name' });
     }
 
-    const room = await createRoom(req.body);
+    // Normalize and map frontend fields to backend schema
+    const inBody = req.body || {};
+    const payload = {};
+    payload.name = inBody.name;
+    if (inBody.slug) payload.slug = inBody.slug;
+    payload.type = inBody.type || inBody.roomType || null;
+    payload.description = inBody.description || inBody.desc || null;
+
+    // occupancy or capacity
+    const capacityVal = inBody.occupancy ?? inBody.capacity;
+    if (capacityVal !== undefined) payload.capacity = Number(capacityVal) || 1;
+
+    // rate or pricePerNight
+    const rateVal = inBody.rate ?? inBody.pricePerNight;
+    if (rateVal !== undefined) payload.pricePerNight = Number(rateVal) || 0;
+
+    // features
+    payload.features = inBody.features || inBody.featuresString || null;
+
+    // images/media mapping
+    const media = inBody.media || inBody.images;
+    if (Array.isArray(media)) {
+      payload.images = media.map((m) => ({ url: m.url || m.path || m, altText: m.altText || m.caption || '', isPrimary: !!m.isPrimary }));
+    }
+
+    // normalize status to enum values (AVAILABLE, BOOKED, RESERVED, MAINTENANCE)
+    if (inBody.status) {
+      const s = String(inBody.status).trim().toUpperCase();
+      const allowed = ['AVAILABLE', 'BOOKED', 'RESERVED', 'MAINTENANCE'];
+      if (allowed.includes(s)) payload.status = s;
+      else payload.status = undefined; // omit invalid status to use default
+    }
+
+    console.info('[createRoom] sanitized payload keys=', Object.keys(payload));
+    const room = await createRoom(payload);
     console.info('[createRoom] created room', { id: room.id, name: room.name, actor });
     return res.status(201).json({ success: true, data: room });
   } catch (error) {
