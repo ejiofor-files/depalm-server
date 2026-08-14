@@ -6,6 +6,11 @@ const apiRoutes = require('./routes');
 dotenv.config();
 
 const app = express();
+// Simple request logger to assist debugging (prints method, path and time)
+app.use((req, res, next) => {
+  console.info(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} from ${req.ip}`);
+  next();
+});
 // Increase JSON/body size limits to accept image previews or larger payloads from the client
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

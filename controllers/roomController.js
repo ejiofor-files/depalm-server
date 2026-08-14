@@ -119,10 +119,29 @@ async function deleteRoomMediaController(req, res) {
 
 async function createRoomController(req, res) {
   try {
+    // log who is creating and the payload (avoid logging secrets)
+    const actor = req.user?.email || req.user?.id || 'unknown';
+    console.info('[createRoom] request by', actor, 'payloadKeys=', Object.keys(req.body));
+
+    // Basic validation for faster feedback
+    if (!req.body || !req.body.name) {
+      console.warn('[createRoom] validation failed: missing name', { actor, body: req.body });
+      return res.status(400).json({ success: false, error: 'Missing required field: name' });
+    }
+
     const room = await createRoom(req.body);
+    console.info('[createRoom] created room', { id: room.id, name: room.name, actor });
     return res.status(201).json({ success: true, data: room });
   } catch (error) {
-    return res.status(400).json({ success: false, error: error.message });
+    // Prisma errors include a `code` property (eg P2002 for unique constraint)
+    const actor = req.user?.email || req.user?.id || 'unknown';
+    console.error('[createRoom] failed', { actor, message: error.message, code: error.code, meta: error.meta });
+
+    if (error && error.code === 'P2002') {
+      return res.status(400).json({ success: false, error: 'Duplicate entry: a room with that name or slug already exists' });
+    }
+
+    return res.status(500).json({ success: false, error: error.message || 'Internal server error' });
   }
 }
 
