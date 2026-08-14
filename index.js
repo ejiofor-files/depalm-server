@@ -10,9 +10,25 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // CORS: allow frontend origin(s) defined in FRONTEND_ORIGIN (comma-separated)
-// Example: FRONTEND_ORIGIN=http://localhost:3000 or FRONTEND_ORIGIN=http://localhost:3000,https://app.example.com
+// Example: FRONTEND_ORIGIN=https://depalmapartment.vercel.app
+// Example: FRONTEND_ORIGIN=http://localhost:3000,https://app.example.com
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
-app.use(cors({ origin: FRONTEND_ORIGIN ? FRONTEND_ORIGIN.split(',') : true, credentials: true }));
+const allowedOrigins = (FRONTEND_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 
 app.use('/api', apiRoutes);
 
