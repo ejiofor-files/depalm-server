@@ -97,8 +97,15 @@ async function createBooking({ roomId, guestName, guestEmail, checkInDate, check
     throw new Error('Room not found');
   }
 
+  // Parse as ISO 8601 UTC (always has Z or will be treated as UTC)
   const checkIn = new Date(checkInDate);
   const checkOut = new Date(checkOutDate);
+  
+  // Validate dates are valid
+  if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
+    throw new Error('Invalid date format. Use ISO 8601: YYYY-MM-DDTHH:mm:ssZ');
+  }
+  
   if (checkOut <= checkIn) {
     throw new Error('Checkout date must be after check-in date');
   }
@@ -124,7 +131,20 @@ async function createBooking({ roomId, guestName, guestEmail, checkInDate, check
   });
 
   await refreshRoomStatus(roomId);
-  return booking;
+  
+  // Return with ISO 8601 formatted dates
+  return formatBookingResponse(booking);
+}
+
+// Helper to format booking response with ISO 8601 dates
+function formatBookingResponse(booking) {
+  return {
+    ...booking,
+    checkInDate: booking.checkInDate.toISOString(),
+    checkOutDate: booking.checkOutDate.toISOString(),
+    createdAt: booking.createdAt.toISOString(),
+    updatedAt: booking.updatedAt.toISOString(),
+  };
 }
 
 async function extendBooking({ bookingId, newCheckOutDate }) {
@@ -161,23 +181,25 @@ async function extendBooking({ bookingId, newCheckOutDate }) {
   });
 
   await refreshRoomStatus(booking.roomId);
-  return updatedBooking;
+  return formatBookingResponse(updatedBooking);
 }
 
 async function getBookingById(bookingId) {
-  return prisma.booking.findUnique({
+  const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: {
-      room: true,
-    },
+    include: { room: true },
   });
+  
+  return booking ? formatBookingResponse(booking) : null;
 }
 
 async function listBookings() {
-  return prisma.booking.findMany({
+  const bookings = await prisma.booking.findMany({
     include: { room: true },
     orderBy: { checkInDate: 'asc' },
   });
+  
+  return bookings.map(formatBookingResponse);
 }
 
 module.exports = {
@@ -185,4 +207,6 @@ module.exports = {
   extendBooking,
   getBookingById,
   listBookings,
+  refreshRoomStatus,
+  formatBookingResponse,
 };
