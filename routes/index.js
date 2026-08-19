@@ -9,6 +9,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const router = express.Router();
 
 router.get('/', getStatus);
+router.get('/health', getStatus);
 // Protect API endpoints that modify or return sensitive data
 router.use('/bookings', authMiddleware, bookingRoutes);
 // Mount reservations without global auth so the POST route can be public (public reservations)

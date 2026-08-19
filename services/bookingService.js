@@ -90,6 +90,44 @@ async function refreshRoomStatus(roomId) {
   });
 }
 
+async function completeEndedBookings() {
+  const now = new Date();
+  const activeStatuses = ['PENDING', 'CONFIRMED', 'RESERVED', 'CHECKED_IN'];
+  const endedBookings = await prisma.booking.findMany({
+    where: {
+      status: { in: activeStatuses },
+      checkOutDate: { lte: now },
+    },
+    select: {
+      id: true,
+      roomId: true,
+    },
+  });
+
+  if (endedBookings.length === 0) {
+    return { bookingsUpdated: 0, roomsUpdated: 0 };
+  }
+
+  const bookingIds = endedBookings.map((booking) => booking.id);
+  const roomIds = [...new Set(endedBookings.map((booking) => booking.roomId))];
+
+  const updatedBookings = await prisma.booking.updateMany({
+    where: {
+      id: { in: bookingIds },
+      status: { in: activeStatuses },
+      checkOutDate: { lte: now },
+    },
+    data: { status: 'CHECKED_OUT' },
+  });
+
+  await Promise.all(roomIds.map((roomId) => refreshRoomStatus(roomId)));
+
+  return {
+    bookingsUpdated: updatedBookings.count,
+    roomsUpdated: roomIds.length,
+  };
+}
+
 
 async function createBooking({ roomId, guestName, guestEmail, checkInDate, checkOutDate, guests = 1 }) {
   const room = await prisma.room.findUnique({ where: { id: roomId } });
@@ -208,5 +246,6 @@ module.exports = {
   getBookingById,
   listBookings,
   refreshRoomStatus,
+  completeEndedBookings,
   formatBookingResponse,
 };

@@ -4,6 +4,7 @@ const cors = require('cors');
 const apiRoutes = require('./routes');
 
 dotenv.config();
+const { startBookingStatusJob } = require('./services/bookingStatusJob');
 
 const app = express();
 // Simple request logger to assist debugging (prints method, path and time)
@@ -36,6 +37,8 @@ app.use(cors({
 }));
 
 app.use('/api', apiRoutes);
+
+startBookingStatusJob();
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
