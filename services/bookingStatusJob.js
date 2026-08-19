@@ -4,7 +4,7 @@ const { completeEndedBookings } = require('./bookingService');
 function startBookingStatusJob() {
   const timezone = process.env.CRON_TIMEZONE || 'Africa/Lagos';
 
-  cron.schedule('0 12 * * *', async () => {
+  async function runCleanup() {
     try {
       const result = await completeEndedBookings();
       console.log(
@@ -13,7 +13,10 @@ function startBookingStatusJob() {
     } catch (error) {
       console.error('Booking status cleanup failed:', error.message || error);
     }
-  }, { timezone });
+  }
+
+  cron.schedule('0 12 * * *', runCleanup, { timezone });
+  runCleanup();
 
   console.log(`Booking status cleanup scheduled for 12:00 daily (${timezone})`);
 }
