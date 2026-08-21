@@ -76,7 +76,7 @@ async function getRoomCurrentStatus(roomId) {
   });
 
   if (futureReservationOrBooking) {
-    return 'RESERVED';
+    return futureReservationOrBooking.status === 'CONFIRMED' ? 'BOOKED' : 'RESERVED';
   }
 
   return 'AVAILABLE';
