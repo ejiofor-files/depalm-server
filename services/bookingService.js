@@ -60,12 +60,27 @@ async function getRoomCurrentStatus(roomId) {
     return 'BOOKED';
   }
 
+  const futureConfirmedBooking = await prisma.booking.findFirst({
+    where: {
+      roomId,
+      status: 'CONFIRMED',
+      checkOutDate: {
+        gt: today,
+      },
+    },
+    orderBy: {
+      checkInDate: 'asc',
+    },
+  });
+
+  if (futureConfirmedBooking) {
+    return 'BOOKED';
+  }
+
   const futureReservationOrBooking = await prisma.booking.findFirst({
     where: {
       roomId,
-      status: {
-        in: ['RESERVED', 'CONFIRMED', 'PENDING'],
-      },
+      status: { in: ['RESERVED', 'PENDING'] },
       checkInDate: {
         gt: today,
       },
@@ -76,7 +91,7 @@ async function getRoomCurrentStatus(roomId) {
   });
 
   if (futureReservationOrBooking) {
-    return futureReservationOrBooking.status === 'CONFIRMED' ? 'BOOKED' : 'RESERVED';
+    return 'RESERVED';
   }
 
   return 'AVAILABLE';
@@ -104,21 +119,23 @@ async function completeEndedBookings() {
     },
   });
 
-  if (endedBookings.length === 0) {
-    return { bookingsUpdated: 0, roomsUpdated: 0 };
-  }
-
   const bookingIds = endedBookings.map((booking) => booking.id);
-  const roomIds = [...new Set(endedBookings.map((booking) => booking.roomId))];
-
-  const updatedBookings = await prisma.booking.updateMany({
-    where: {
-      id: { in: bookingIds },
-      status: { in: activeStatuses },
-      checkOutDate: { lte: now },
-    },
-    data: { status: 'CHECKED_OUT' },
+  const rooms = await prisma.room.findMany({
+    where: { status: { not: 'MAINTENANCE' } },
+    select: { id: true },
   });
+  const roomIds = rooms.map((room) => room.id);
+
+  const updatedBookings = bookingIds.length === 0
+    ? { count: 0 }
+    : await prisma.booking.updateMany({
+      where: {
+        id: { in: bookingIds },
+        status: { in: activeStatuses },
+        checkOutDate: { lte: now },
+      },
+      data: { status: 'CHECKED_OUT' },
+    });
 
   await Promise.all(roomIds.map((roomId) => refreshRoomStatus(roomId)));
 
