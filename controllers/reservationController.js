@@ -5,7 +5,10 @@ const { createReservation, listReservations, getReservationById } = require('../
 async function createReservationController(req, res) {
   try {
     const actor = req.user?.email || 'public';
-    const userRole = req.user?.role || null;
+    const userRole = req.user?.app_metadata?.role
+      || req.user?.user_metadata?.role
+      || req.user?.role
+      || null;
     
     // Determine source based on auth and role
     let source = 'PUBLIC';

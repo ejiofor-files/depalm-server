@@ -4,6 +4,8 @@ const prisma = require('./prisma');
 function formatReservationResponse(reservation) {
   return {
     ...reservation,
+    source: reservation.source || 'PUBLIC',
+    status: reservation.status || 'RESERVED',
     holdFrom: reservation.holdFrom.toISOString(),
     holdUntil: reservation.holdUntil.toISOString(),
     createdAt: reservation.createdAt.toISOString(),
